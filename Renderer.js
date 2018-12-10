@@ -5,7 +5,7 @@
     2013875008
     Landscape Architecture
 
-    2018.11.25
+    2018.12.10
 */
 class Renderer {
 
@@ -18,13 +18,26 @@ class Renderer {
         this.csp = new ColorShaderProgram(this.gl, vscText, fscText);
         this.tsp = new TextureShaderProgram(this.gl, vstText, fstText);
         this.viewMatrix = new Matrix4();
+        this.eyePoint = [0.0, -3.0, 2.0];
         this.projMatrix = new Matrix4();
         this._init();
     }
 
+    static get X_AXIS() { return [1.0, 0.0, 0.0]; }
+    static get Y_AXIS() { return [0.0, 1.0, 0.0]; }
+    static get Z_AXIS() { return [0.0, 0.0, 1.0]; }
+    get horizAxis() {
+        var mat = new Matrix4().setRotate(90, 0, 0, 1);
+        var eyeVec = new Vector4(this.eyePoint.concat([1.0]));
+        var rotdVec = mat.multiplyVector4(eyeVec);
+        var rotdEye = Array.from(rotdVec.elements).slice(0, 3);
+        rotdEye[2] = 0;
+        return rotdEye;
+    }
+
     _init() {
         this.setDefaultView();
-        this.projMatrix.setPerspective(90, 1.0, 0.1, 100);
+        this.projMatrix.setPerspective(90, 1.0, 0.01, 100.0);
         this.gl.enable(this.gl.DEPTH_TEST);
         this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
         this.clear();
@@ -128,8 +141,48 @@ class Renderer {
         this.viewMatrix.setLookAt(...src, ...dest, ...up);
     }
 
+    viewFrom(point) {
+        this.viewMatrix.setLookAt(...point, 0, 0, 0, 0, 0, 1);
+    }
+
     setDefaultView() {
-        this.viewMatrix.setLookAt(0, -3, 2, 0, 0, 0, 0, 1, 0);
+        this.viewMatrix.setLookAt(0, -3, 2, 0, 0, 0, 0, 0, 1);
+    }
+
+    rotateView(angle, axis) {
+        var mat = new Matrix4().setRotate(angle, ...axis);
+        var vec = new Vector4(this.eyePoint.concat([1.0]));
+        var newVec = mat.multiplyVector4(vec);
+        var newEyePoint = Array.from(newVec.elements).slice(0, 3);
+        if (!this._isProperEye(newEyePoint)) {
+            return;
+        }
+
+        this.viewFrom(newEyePoint);
+        this.eyePoint = newEyePoint;
+    }
+
+    zoomView(diff) {
+        var eyeDist = Math.sqrt(this.eyePoint.map(x => x * x).reduce((x, y) => x + y, 0));
+        var newDist = eyeDist - diff;
+        if (newDist < 0.1) {
+            return;
+        }
+        var prop = newDist / eyeDist;
+        var newEyePoint = this.eyePoint.map(x => x * prop);
+
+        this.viewFrom(newEyePoint);
+        this.eyePoint = newEyePoint;
+    }
+
+    _isProperEye(eyePoint) {
+        if (eyePoint[2] < 0) {
+            return false;
+        } else if (eyePoint[0] * this.eyePoint[0] < 0 && eyePoint[1] * this.eyePoint[1] < 0) { // is it perfect?
+            return false;
+        } else {
+            return true;
+        }
     }
 
     setViewport(posX, posY, width, height) {
