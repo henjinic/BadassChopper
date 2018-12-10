@@ -15,8 +15,11 @@ class Renderer {
         var fscText = document.getElementById('fshader-colored').text;
         var vstText = document.getElementById('vshader-textured').text;
         var fstText = document.getElementById('fshader-textured').text;
+        var vstrText = document.getElementById('vshader-terrain').text;
+        var fstrText = document.getElementById('fshader-terrain').text;
         this.csp = new ColorShaderProgram(this.gl, vscText, fscText);
         this.tsp = new TextureShaderProgram(this.gl, vstText, fstText);
+        this.trsp = new TerrainShaderProgram(this.gl, vstrText, fstrText);
         this.viewMatrix = new Matrix4();
         this.eyePoint = [0.0, -3.0, 2.0];
         this.projMatrix = new Matrix4();
@@ -62,6 +65,18 @@ class Renderer {
                     0.2, 0.3, 0.1, 0.2, 0.3, 0.1, 0.2, 0.3, 0.1, 0.2, 0.3, 0.1
                 ]), component.indices);
             }
+        } else if (component instanceof TerrainComponent) {
+            {
+                component.vao = this.gl.createVertexArray();
+                this._setTerrainVao(component.vao, component.vertices, component.indices);
+                component.image.onload = function() { self._loadImage(component) };
+            }
+            {   // to show brown plane while loading
+                // component.loadingVao = this.gl.createVertexArray();
+                // this._setColoredVao(component.loadingVao, component.vertices, new Float32Array([
+                //     0.2, 0.3, 0.1, 0.2, 0.3, 0.1, 0.2, 0.3, 0.1, 0.2, 0.3, 0.1
+                // ]), component.indices);
+            }
         } else {
             console.log('Error: Renderer.load()');
         }
@@ -92,6 +107,13 @@ class Renderer {
         this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, indices, this.gl.STATIC_DRAW);
     }
 
+    _setTerrainVao(vao, coords, indices) {
+        this.gl.bindVertexArray(vao);
+        this._setArrayBuffer(coords, this.trsp.loc['a_TexCoord'], 2);
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.gl.createBuffer());
+        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, indices, this.gl.STATIC_DRAW);
+    }
+
     _setArrayBuffer(data, location, num) {
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.gl.createBuffer());
         this.gl.bufferData(this.gl.ARRAY_BUFFER, data, this.gl.STATIC_DRAW);
@@ -107,6 +129,11 @@ class Renderer {
                 this._renderTexturedComponent(component, component.vao);
             else
                 this._renderColoredComponent(component, component.loadingVao);
+        } else if (component instanceof TerrainComponent) {
+            if (component.isLoaded)
+                this._renderTerrainComponent(component, component.vao);
+            // else
+                // this._renderColoredComponent(component, component.loadingVao);
         } else {
             console.log('Error: Renderer.render()');
         }
@@ -116,7 +143,7 @@ class Renderer {
         this.gl.bindVertexArray(vao);
         this.csp.use();
         this.gl.uniformMatrix4fv(this.csp.loc['u_MvpMatrix'], false, this._modelToMVP(component.modelMatrix).elements);
-        this.gl.drawElements(this.gl.TRIANGLES, component.indices.length, this.gl.UNSIGNED_BYTE, 0);
+        this.gl.drawElements(this.gl.TRIANGLES, component.indices.length, this.gl.UNSIGNED_INT, 0);
     }
 
     _renderTexturedComponent(component, vao) {
@@ -126,7 +153,17 @@ class Renderer {
         this.gl.bindTexture(this.gl.TEXTURE_2D, component.texture);
         this.gl.activeTexture(this.gl.TEXTURE0);
         this.gl.uniform1i(this.tsp.loc['u_Sampler'], 0);
-        this.gl.drawElements(this.gl.TRIANGLES, component.indices.length, this.gl.UNSIGNED_BYTE, 0);
+        this.gl.drawElements(this.gl.TRIANGLES, component.indices.length, this.gl.UNSIGNED_INT, 0);
+    }
+
+    _renderTerrainComponent(component, vao) {
+        this.gl.bindVertexArray(vao);
+        this.trsp.use();
+        this.gl.uniformMatrix4fv(this.trsp.loc['u_MvpMatrix'], false, this._modelToMVP(component.modelMatrix).elements);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, component.texture);
+        this.gl.activeTexture(this.gl.TEXTURE0);
+        this.gl.uniform1i(this.trsp.loc['u_Sampler'], 0);
+        this.gl.drawElements(this.gl.TRIANGLES, component.indices.length, this.gl.UNSIGNED_INT, 0);
     }
 
     _modelToMVP(modelMatrix) {
@@ -233,6 +270,16 @@ class TextureShaderProgram extends ShaderProgram {
     _setLocations() {
         this.loc = {};
         for (var varString of ['a_Position', 'a_TexCoord', 'u_MvpMatrix', 'u_Sampler']) {
+            this.loc[varString] = this._getLocation(varString);
+        }
+    }
+}
+
+
+class TerrainShaderProgram extends ShaderProgram {
+    _setLocations() {
+        this.loc = {};
+        for (var varString of ['a_TexCoord', 'u_MvpMatrix', 'u_Sampler']) {
             this.loc[varString] = this._getLocation(varString);
         }
     }
