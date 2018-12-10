@@ -22,7 +22,7 @@ class ChopperSimulator {
         this.W = canvas.width;
         this.H = canvas.height;
         this.renderer = new Renderer(canvas);
-        this.ground = new Ground('https://raw.githubusercontent.com/henjinic/3DChopperSimulation/master/img/land.jpg');
+        this.ground = new Terrain('https://raw.githubusercontent.com/henjinic/BadassChopper/master/img/yorkville.jpg');
         this.chopper = new Chopper();
         this._init();
     }
@@ -32,7 +32,7 @@ class ChopperSimulator {
         this.renderer.load(this.chopper.body);
         this.renderer.load(this.chopper.rotor1);
         this.renderer.load(this.chopper.rotor2);
-        this.chopper.up(0.5);
+        this.chopper.up(1.0);
     }
 
     drawAll() {
@@ -78,9 +78,9 @@ class ChopperSimulator {
         var self = this;
         document.onkeydown = function(event) {
             switch (event.key) {
-                case 'ArrowLeft':  event.shiftKey ? self.renderer.rotateView(-5.0, Renderer.Z_AXIS)  : self.chopper.clockwise(10.0);        break;
+                case 'ArrowLeft':  event.shiftKey ? self.renderer.rotateView(-5.0, Renderer.Z_AXIS) : self.chopper.clockwise(10.0);       break;
                 case 'ArrowRight': event.shiftKey ? self.renderer.rotateView(5.0, Renderer.Z_AXIS) : self.chopper.counterclockwise(10.0); break;
-                case 'ArrowUp':    event.shiftKey ? self.renderer.rotateView(-5.0, self.renderer.horizAxis) : self.chopper.forward(0.05);   break;
+                case 'ArrowUp':    event.shiftKey ? self.renderer.rotateView(-5.0, self.renderer.horizAxis) : self.chopper.forward(0.05); break;
                 case 'ArrowDown':  event.shiftKey ? self.renderer.rotateView(5.0, self.renderer.horizAxis) : self.chopper.backward(0.05); break;
                 case 'A': case 'a': self.chopper.up(0.05);        break;
                 case 'Z': case 'z': self.chopper.down(0.05);      break;
@@ -121,6 +121,29 @@ class Ground {
         ],
             path
         );
+    }
+}
+
+
+class Terrain {
+
+    constructor(path) {
+        const SIZE = 512.0;
+        const GAP = 1.0 / SIZE;
+        var coords = [];
+        var indices = [];
+        var num = 0;
+        var sx, sy;
+
+        for (var col = 0; col < SIZE; col++) {
+            for (var row = 0; row < SIZE; row++, num += 4) {
+                sx = row / SIZE;
+                sy = col / SIZE;
+                coords.push(sx, sy, sx, sy + GAP, sx + GAP, sy + GAP, sx + GAP, sy);
+                indices.push(num, num + 1, num + 2, num, num + 2, num + 3);
+            }
+        }
+        this.component = new TerrainComponent(coords, indices, path);
     }
 }
 

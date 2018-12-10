@@ -5,13 +5,13 @@
     2013875008
     Landscape Architecture
 
-    2018.11.25
+    2018.12.10
 */
 class Component {
 
     constructor(vertices, indices) {
-        this.vertices = new Float32Array(vertices);
-        this.indices = new Uint8Array(indices);
+        this.vertices = new Float32Array(vertices); // can be vertices' positions or texture coordinates
+        this.indices = new Uint32Array(indices);
         this.dynamicMatrix = new Matrix4();
         this.staticMatrix = new Matrix4();
         this.parent = null;
@@ -69,6 +69,18 @@ class TexturedComponent extends Component {
 
     constructor(vertices, indices, image) {
         super(vertices, indices);
+        this.image = new Image();
+        this.image.crossOrigin = 'anonymous';
+        this.image.src = image;
+        this.isLoaded = false;
+    }
+}
+
+
+class TerrainComponent extends Component {
+
+    constructor(texCoord, indices, image) {
+        super(texCoord, indices);
         this.image = new Image();
         this.image.crossOrigin = 'anonymous';
         this.image.src = image;

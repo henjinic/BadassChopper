@@ -60,6 +60,25 @@
       }
     </script>
 
+    <script id="vshader-terrain" type="x-shader/x-vertex">
+      attribute vec2 a_TexCoord;
+      uniform   mat4 u_MvpMatrix;
+      uniform sampler2D u_Sampler;
+      void main()
+      {
+        vec4 pos = vec4((a_TexCoord - 0.5) * 4.0, 1.0 * texture2D(u_Sampler, a_TexCoord).r, 1.0);
+        gl_Position = u_MvpMatrix * pos;
+      }
+    </script>
+
+    <script id="fshader-terrain" type="x-shader/x-fragment">
+      precision mediump float;
+      void main()
+      {
+        gl_FragColor = vec4(0.7, 0.5, 0.3, 1.0);
+      }
+    </script>
+
     <script src="./lib/webgl-utils.js"></script>
     <script src="./lib/webgl-debug.js"></script>
     <script src="./lib/cuon-utils.js"></script>
