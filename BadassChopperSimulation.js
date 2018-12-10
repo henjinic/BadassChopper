@@ -1,11 +1,11 @@
 /*
-    3DChopperSimulation.js
+    BadassChopperSimulation.js
 
     Hyeonjin Kim
     2013875008
     Landscape Architecture
 
-    2018.11.25
+    2018.12.10
 */
 function main() {
     var simulator = new ChopperSimulator(document.getElementById('webgl'));
@@ -19,7 +19,7 @@ function main() {
 class ChopperSimulator {
 
     constructor(canvas) {
-        this.W = canvas.width / 2;
+        this.W = canvas.width;
         this.H = canvas.height;
         this.renderer = new Renderer(canvas);
         this.ground = new Ground('https://raw.githubusercontent.com/henjinic/3DChopperSimulation/master/img/land.jpg');
@@ -37,8 +37,12 @@ class ChopperSimulator {
 
     drawAll() {
         this.renderer.clear();
-        this._drawLeftViewport();
-        this._drawRightViewport();
+        this.renderer.render(this.ground.component);
+        this.renderer.render(this.chopper.body);
+        this.renderer.render(this.chopper.rotor1);
+        this.renderer.render(this.chopper.rotor2);
+        // this._drawLeftViewport();
+        // this._drawRightViewport();
     }
 
     _drawLeftViewport() {
@@ -73,13 +77,15 @@ class ChopperSimulator {
     keypressOn() {
         var self = this;
         document.onkeydown = function(event) {
-            switch (event.keyCode) {
-                case 37: self.chopper.clockwise(10.0);        break; // left
-                case 38: self.chopper.forward(0.05);          break; // up
-                case 39: self.chopper.counterclockwise(10.0); break; // right
-                case 40: self.chopper.backward(0.05);         break; // down
-                case 87: self.chopper.up(0.05);               break; // W
-                case 83: self.chopper.down(0.05);             break; // S
+            switch (event.key) {
+                case 'ArrowLeft':  event.shiftKey ? self.renderer.rotateView(-5.0, Renderer.Z_AXIS)  : self.chopper.clockwise(10.0);        break;
+                case 'ArrowRight': event.shiftKey ? self.renderer.rotateView(5.0, Renderer.Z_AXIS) : self.chopper.counterclockwise(10.0); break;
+                case 'ArrowUp':    event.shiftKey ? self.renderer.rotateView(-5.0, self.renderer.horizAxis) : self.chopper.forward(0.05);   break;
+                case 'ArrowDown':  event.shiftKey ? self.renderer.rotateView(5.0, self.renderer.horizAxis) : self.chopper.backward(0.05); break;
+                case 'A': case 'a': self.chopper.up(0.05);        break;
+                case 'Z': case 'z': self.chopper.down(0.05);      break;
+                case '=': case '+': self.renderer.zoomView(0.2);  break;
+                case '-': case '_': self.renderer.zoomView(-0.2); break;
             }
             self.drawAll();
         };
@@ -200,7 +206,7 @@ class Chopper {
     }
 
     down(distance) {
-        if (this.height > 0.2) {
+        if (this.height > 0.1) {
             this.body.moveZ(-distance);
             this.height -= distance;
         }
