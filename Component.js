@@ -29,6 +29,10 @@ class Component {
         }
     }
 
+    get normalMatrix() {
+        return new Matrix4().setInverseOf(this.modelMatrix).transpose();
+    }
+
     addChild(child) {
         child.parent = this;
     }
@@ -60,6 +64,23 @@ class ColoredComponent extends Component {
 
     constructor(vertices, colors, indices) {
         super(vertices, indices);
+
+        var normals = [];
+        var x1, y1, z1, x2, y2, z2, cx, cy, cz;
+        for (var i = 0; i < vertices.length; i += 12) {
+            x1 = vertices[i + 3] - vertices[i];
+            y1 = vertices[i + 4] - vertices[i + 1];
+            z1 = vertices[i + 5] - vertices[i + 2];
+            x2 = vertices[i + 6] - vertices[i];
+            y2 = vertices[i + 7] - vertices[i + 1];
+            z2 = vertices[i + 8] - vertices[i + 2];
+            cx = y1 * z2 - z1 * y2;
+            cy = z1 * x2 - x1 * z2;
+            cz = x1 * y2 - y1 * x2;
+            normals.push(cx, cy, cz, cx, cy, cz, cx, cy, cz, cx, cy, cz);
+        }
+
+        this.normals = new Float32Array(normals);
         this.colors = new Float32Array(colors);
     }
 }

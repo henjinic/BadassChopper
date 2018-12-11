@@ -50,7 +50,7 @@ class Renderer {
         var self = this;
         if (component instanceof ColoredComponent) {
             component.vao = this.gl.createVertexArray();
-            this._setColoredVao(component.vao, component.vertices, component.colors, component.indices);
+            this._setColoredVao(component.vao, component.vertices, component.colors, component.normals, component.indices);
         } else if (component instanceof TexturedComponent) {
             {
                 component.vao = this.gl.createVertexArray();
@@ -91,10 +91,11 @@ class Renderer {
         texturedComponent.isLoaded = true;
     }
 
-    _setColoredVao(vao, vertices, colors, indices) {
+    _setColoredVao(vao, vertices, colors, normals, indices) {
         this.gl.bindVertexArray(vao);
         this._setArrayBuffer(vertices, this.csp.loc['a_Position'], 3);
         this._setArrayBuffer(colors, this.csp.loc['a_Color'], 3);
+        this._setArrayBuffer(normals, this.csp.loc['a_Normal'], 3);
         this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.gl.createBuffer());
         this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, indices, this.gl.STATIC_DRAW);
     }
@@ -143,6 +144,8 @@ class Renderer {
         this.gl.bindVertexArray(vao);
         this.csp.use();
         this.gl.uniformMatrix4fv(this.csp.loc['u_MvpMatrix'], false, this._modelToMVP(component.modelMatrix).elements);
+        this.gl.uniformMatrix4fv(this.csp.loc['u_ModelMatrix'], false, component.modelMatrix.elements);
+        this.gl.uniformMatrix4fv(this.csp.loc['u_NormalMatrix'], false, component.normalMatrix.elements);
         this.gl.drawElements(this.gl.TRIANGLES, component.indices.length, this.gl.UNSIGNED_INT, 0);
     }
 
@@ -160,6 +163,7 @@ class Renderer {
         this.gl.bindVertexArray(vao);
         this.trsp.use();
         this.gl.uniformMatrix4fv(this.trsp.loc['u_MvpMatrix'], false, this._modelToMVP(component.modelMatrix).elements);
+        this.gl.uniformMatrix4fv(this.trsp.loc['u_ModelMatrix'], false, component.modelMatrix.elements);
         this.gl.bindTexture(this.gl.TEXTURE_2D, component.texture);
         this.gl.activeTexture(this.gl.TEXTURE0);
         this.gl.uniform1i(this.trsp.loc['u_Sampler'], 0);
@@ -259,7 +263,7 @@ class ShaderProgram {
 class ColorShaderProgram extends ShaderProgram {
     _setLocations() {
         this.loc = {};
-        for (var varString of ['a_Position', 'a_Color', 'u_MvpMatrix']) {
+        for (var varString of ['a_Position', 'a_Color', 'a_Normal', 'u_MvpMatrix', 'u_ModelMatrix', 'u_NormalMatrix']) {
             this.loc[varString] = this._getLocation(varString);
         }
     }
@@ -279,7 +283,7 @@ class TextureShaderProgram extends ShaderProgram {
 class TerrainShaderProgram extends ShaderProgram {
     _setLocations() {
         this.loc = {};
-        for (var varString of ['a_TexCoord', 'u_MvpMatrix', 'u_Sampler']) {
+        for (var varString of ['a_TexCoord', 'u_MvpMatrix', 'u_ModelMatrix', 'u_Sampler']) {
             this.loc[varString] = this._getLocation(varString);
         }
     }
