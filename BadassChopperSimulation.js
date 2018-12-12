@@ -128,7 +128,7 @@ class Ground {
 class Terrain {
 
     constructor(path) {
-        const SIZE = 512.0;
+        const SIZE = 256.0;
         const GAP = 1.0 / SIZE;
         var coords = [];
         var indices = [];

@@ -38,17 +38,31 @@
 
     <script id="fshader-colored" type="x-shader/x-fragment">
       precision mediump float;
+      uniform vec3 u_LightDirection;
+      uniform vec3 u_AmbientIntensity;
+      uniform vec3 u_DiffusiveIntensity;
+      uniform vec3 u_SpecularIntensity;
+      uniform vec3 u_EyePosition;
       varying vec3 v_Position;
       varying vec4 v_Color;
       varying vec3 v_Normal;
       void main()
       {
         vec3 normal = normalize(v_Normal);
-        vec3 lightDirection = normalize(vec3(1.0, -1.0, 3.0));
+        vec3 direction = normalize(u_LightDirection);
+        vec3 eyePosition = normalize(u_EyePosition);
+        float lDotn = dot(direction, normal);
 
-        vec3 diffuse = vec3(1.0, 1.0, 1.0) * v_Color.rgb * max(dot(lightDirection, normal), 0.0);
-        vec3 ambient = vec3(0.2, 0.2, 0.2) * v_Color.rgb;
-        gl_FragColor = vec4(diffuse + ambient, v_Color.a);
+        vec3 ambient = u_AmbientIntensity * v_Color.rgb;
+        vec3 diffusive = u_DiffusiveIntensity * v_Color.rgb * max(lDotn, 0.0);
+        vec3 specular = vec3(0.0);
+        if (lDotn > 0.0) {
+          vec3 halfway = normalize(direction + eyePosition);
+          float nDotH = dot(normal, halfway);
+          specular = u_SpecularIntensity * v_Color.rgb * pow(max(nDotH, 0.0), 16.0);
+        }
+
+        gl_FragColor = vec4(diffusive + ambient + specular, v_Color.a);
       }
     </script>
 
@@ -96,16 +110,32 @@
 
     <script id="fshader-terrain" type="x-shader/x-fragment">
       precision mediump float;
+      uniform vec3 u_LightDirection;
+      uniform vec3 u_AmbientIntensity;
+      uniform vec3 u_DiffusiveIntensity;
+      uniform vec3 u_SpecularIntensity;
+      uniform vec3 u_EyePosition;
       varying vec3 v_Position;
       varying vec3 v_Normal;
       void main()
       {
+        vec4 v_Color = vec4(0.7, 0.5, 0.3, 1.0);
+
         vec3 normal = normalize(v_Normal);
-        vec3 lightDirection = normalize(vec3(1.0, -1.0, 3.0));
-        vec3 diffuse = vec3(1.0, 1.0, 1.0) * vec3(0.7, 0.5, 0.3) * max(dot(lightDirection, normal), 0.0);
-        vec3 ambient = vec3(0.2, 0.2, 0.2) * vec3(0.7, 0.5, 0.3);
-        gl_FragColor = vec4(diffuse + ambient, 1.0);
-        // gl_FragColor = vec4(0.7, 0.5, 0.3, 1.0);
+        vec3 direction = normalize(u_LightDirection);
+        vec3 eyePosition = normalize(u_EyePosition);
+        float lDotn = dot(direction, normal);
+
+        vec3 ambient = u_AmbientIntensity * v_Color.rgb;
+        vec3 diffusive = u_DiffusiveIntensity * v_Color.rgb * max(lDotn, 0.0);
+        vec3 specular = vec3(0.0);
+        if (lDotn > 0.0) {
+          vec3 halfway = normalize(direction + eyePosition);
+          float nDotH = dot(normal, halfway);
+          specular = u_SpecularIntensity * v_Color.rgb * pow(max(nDotH, 0.0), 1.0);
+        }
+
+        gl_FragColor = vec4(ambient + diffusive + specular, v_Color.a);
       }
     </script>
 
@@ -116,6 +146,7 @@
     <script src="./BadassChopperSimulation.js"></script>
     <script src="./Renderer.js"></script>
     <script src="./Component.js"></script>
+    <script src="./Light.js"></script>
     <script src="./Iterator.js"></script>
   </body>
 </html>
