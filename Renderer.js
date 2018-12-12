@@ -23,6 +23,9 @@ class Renderer {
         this.viewMatrix = new Matrix4();
         this.eyePoint = [0.0, -3.0, 2.0];
         this.projMatrix = new Matrix4();
+
+        this.light = new DirectionalLight([5.0, -5.0, 5.0], [0.1, 0.1, 0.1], [0.3, 0.3, 0.3], [0.3, 0.3, 0.3]);
+
         this._init();
     }
 
@@ -143,6 +146,7 @@ class Renderer {
     _renderColoredComponent(component, vao) {
         this.gl.bindVertexArray(vao);
         this.csp.use();
+        this._uniformLights(this.csp);
         this.gl.uniformMatrix4fv(this.csp.loc['u_MvpMatrix'], false, this._modelToMVP(component.modelMatrix).elements);
         this.gl.uniformMatrix4fv(this.csp.loc['u_ModelMatrix'], false, component.modelMatrix.elements);
         this.gl.uniformMatrix4fv(this.csp.loc['u_NormalMatrix'], false, component.normalMatrix.elements);
@@ -162,12 +166,21 @@ class Renderer {
     _renderTerrainComponent(component, vao) {
         this.gl.bindVertexArray(vao);
         this.trsp.use();
+        this._uniformLights(this.trsp);
         this.gl.uniformMatrix4fv(this.trsp.loc['u_MvpMatrix'], false, this._modelToMVP(component.modelMatrix).elements);
         this.gl.uniformMatrix4fv(this.trsp.loc['u_ModelMatrix'], false, component.modelMatrix.elements);
         this.gl.bindTexture(this.gl.TEXTURE_2D, component.texture);
         this.gl.activeTexture(this.gl.TEXTURE0);
         this.gl.uniform1i(this.trsp.loc['u_Sampler'], 0);
         this.gl.drawElements(this.gl.TRIANGLES, component.indices.length, this.gl.UNSIGNED_INT, 0);
+    }
+
+    _uniformLights(program) {
+        this.gl.uniform3fv(program.loc['u_LightDirection'], this.light['direction']);
+        this.gl.uniform3fv(program.loc['u_AmbientIntensity'], this.light.ambientIntensity);
+        this.gl.uniform3fv(program.loc['u_DiffusiveIntensity'], this.light.diffusiveIntensity);
+        this.gl.uniform3fv(program.loc['u_SpecularIntensity'], this.light.specularIntensity);
+        this.gl.uniform3fv(program.loc['u_EyePosition'], new Float32Array(this.eyePoint));
     }
 
     _modelToMVP(modelMatrix) {
@@ -237,7 +250,9 @@ class ShaderProgram {
         this.gl = gl;
         initShaders(this.gl, vshader, fshader);
         this.program = this.gl.program;
+        this.loc = {};
         this._setLocations();
+        this._setLightLocations();
     }
 
     use() {
@@ -246,6 +261,12 @@ class ShaderProgram {
 
     _setLocations() {
         // abstract method
+    }
+
+    _setLightLocations() {
+        for (var varString of ['u_LightDirection', 'u_AmbientIntensity', 'u_DiffusiveIntensity', 'u_SpecularIntensity', 'u_EyePosition']) {
+            this.loc[varString] = this._getLocation(varString);
+        }
     }
 
     _getLocation(varString) {
@@ -262,7 +283,6 @@ class ShaderProgram {
 
 class ColorShaderProgram extends ShaderProgram {
     _setLocations() {
-        this.loc = {};
         for (var varString of ['a_Position', 'a_Color', 'a_Normal', 'u_MvpMatrix', 'u_ModelMatrix', 'u_NormalMatrix']) {
             this.loc[varString] = this._getLocation(varString);
         }
@@ -272,7 +292,6 @@ class ColorShaderProgram extends ShaderProgram {
 
 class TextureShaderProgram extends ShaderProgram {
     _setLocations() {
-        this.loc = {};
         for (var varString of ['a_Position', 'a_TexCoord', 'u_MvpMatrix', 'u_Sampler']) {
             this.loc[varString] = this._getLocation(varString);
         }
@@ -282,7 +301,6 @@ class TextureShaderProgram extends ShaderProgram {
 
 class TerrainShaderProgram extends ShaderProgram {
     _setLocations() {
-        this.loc = {};
         for (var varString of ['a_TexCoord', 'u_MvpMatrix', 'u_ModelMatrix', 'u_Sampler']) {
             this.loc[varString] = this._getLocation(varString);
         }
