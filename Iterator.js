@@ -13,26 +13,24 @@ class Iterator {
         this.second = second;
         this.amount = amount;
         this.behavior = behavior;
+        this.reqId = undefined;
     }
 
     start() {
-        var second = this.second;
-        var amount = this.amount;
-        var behavior = this.behavior;
-        var curTime = Date.now();
-
-        var loop = function () {
-            var newTime = Date.now();
-            var elapsedSecond = (newTime - curTime) / 1000.0;
+        let self = this;
+        let curTime = Date.now();
+        let loop = function () {
+            let newTime = Date.now();
+            let elapsedSecond = (newTime - curTime) / 1000.0;
 
             curTime = newTime;
-            behavior(amount * elapsedSecond / second);
-            requestAnimationFrame(loop);
+            self.behavior(self.amount * elapsedSecond / self.second);
+            self.reqId = requestAnimationFrame(loop);
         };
         loop();
     }
 
     stop() {
-        // for later use
+        cancelAnimationFrame(this.reqId);
     }
 }
