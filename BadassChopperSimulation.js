@@ -10,9 +10,10 @@
 function main() {
     let simulator = new ChopperSimulator(document.getElementById('webgl'));
 
-    simulator.drawAll();
     simulator.keypressOn();
     simulator.rotorOn();
+
+    simulator.start();
 };
 
 
@@ -21,33 +22,38 @@ class ChopperSimulator {
     constructor(canvas) {
         this.W = canvas.width;
         this.H = canvas.height;
-        this.renderer = new Renderer(canvas);
+        this.rm = new RenderingManager(canvas);
+        this.view = new View(0, 0, this.W, this.H);
         this.ground = new Terrain('https://raw.githubusercontent.com/henjinic/BadassChopper/master/img/yorkville.jpg');
         this.chopper = new Chopper();
-        this.bullets = [];
         this._init();
     }
 
     _init() {
-        this.renderer.load(this.ground.component);
-        this.renderer.load(this.chopper.body);
-        this.renderer.load(this.chopper.rotor1);
-        this.renderer.load(this.chopper.rotor2);
         this.chopper.up(1.0);
+        this.rm.addView(this.view);
+        this.rm.addCompo(this.ground.component);
+        this.rm.addCompo(this.chopper.body);
+        this.rm.addCompo(this.chopper.rotor1);
+        this.rm.addCompo(this.chopper.rotor2);
+        this.rm.addLight(new DirectionalLight(
+            [5.0, -5.0, 5.0],
+            new Array(3).fill(0.05),
+            new Array(3).fill(0.2),
+            new Array(3).fill(0.2)
+        ));
     }
 
-    drawAll() {
-        this.renderer.clear();
-        this.renderer.render(this.ground.component);
-        this.renderer.render(this.chopper.body);
-        this.renderer.render(this.chopper.rotor1);
-        this.renderer.render(this.chopper.rotor2);
-        for (let bullet of this.bullets) {
-            this.renderer.render(bullet.component);
-        }
-
-        // this._drawLeftViewport();
-        // this._drawRightViewport();
+    start() {
+        let self = this;
+        let total = 0.0;
+        new Iterator(1.0, 60.0, function(amount) { // 60 frames per second. (?)
+            total += amount;
+            if (total >= 1.0) {
+                self.rm.draw();
+                total = 0.0;
+            }
+        }).start();
     }
 
     _drawLeftViewport() {
@@ -75,31 +81,30 @@ class ChopperSimulator {
         let self = this;
         document.onkeydown = function(event) {
             switch (event.key) {
-                case 'ArrowLeft':  event.shiftKey ? self.renderer.rotateView(-5.0, Renderer.Z_AXIS) : self.chopper.clockwise(10.0);       break;
-                case 'ArrowRight': event.shiftKey ? self.renderer.rotateView(5.0, Renderer.Z_AXIS) : self.chopper.counterclockwise(10.0); break;
-                case 'ArrowUp':    event.shiftKey ? self.renderer.rotateView(-5.0, self.renderer.horizAxis) : self.chopper.forward(0.05); break;
-                case 'ArrowDown':  event.shiftKey ? self.renderer.rotateView(5.0, self.renderer.horizAxis) : self.chopper.backward(0.05); break;
+                case 'ArrowLeft':  event.shiftKey ? self.view.rotateView(-5.0, View.Z_AXIS) : self.chopper.clockwise(10.0);       break;
+                case 'ArrowRight': event.shiftKey ? self.view.rotateView(5.0, View.Z_AXIS) : self.chopper.counterclockwise(10.0); break;
+                case 'ArrowUp':    event.shiftKey ? self.view.rotateView(-5.0, self.view.horizAxis) : self.chopper.forward(0.05); break;
+                case 'ArrowDown':  event.shiftKey ? self.view.rotateView(5.0, self.view.horizAxis) : self.chopper.backward(0.05); break;
                 case 'A': case 'a': self.chopper.up(0.05);        break;
                 case 'Z': case 'z': self.chopper.down(0.05);      break;
-                case '=': case '+': self.renderer.zoomView(0.2);  break;
-                case '-': case '_': self.renderer.zoomView(-0.2); break;
+                case '=': case '+': self.view.zoomView(0.2);  break;
+                case '-': case '_': self.view.zoomView(-0.2); break;
                 case ' ': self._shootGlowingBullet();             break;
             }
-            self.drawAll();
         };
     }
 
     _shootGlowingBullet() {
-        if (this.bullets.length < 5) {
+        if (Bullet.num < 5) {
             let bullet = new Bullet(this.chopper.body.position);
+            bullet.compoId = this.rm.addCompo(bullet.component);
+            bullet.lightId = this.rm.addLight(bullet.light);
+
             let velocity = this.chopper.body.direction.slice();
             velocity[2] += 1.0;
             velocity = velocity.map(x => x * 3.0);
 
-            this.renderer.load(bullet.component);
-            this.bullets.push(bullet);
-            this.renderer.addPointLight(bullet.light);
-            bullet.shoot(velocity);
+            bullet.shoot(velocity, this.rm);
         }
     }
 
@@ -112,7 +117,6 @@ class ChopperSimulator {
         this.iterator = new Iterator(1.0, 200.0, function(amount) { // 200 degrees per 1 sec
             self.chopper.rotor1.rotateZ(amount);
             self.chopper.rotor2.rotateZ(amount);
-            self.drawAll();
         });
         this.iterator.start();
     }
@@ -173,11 +177,11 @@ class Bullet {
             0.1,-0.1,-0.1,  -0.1,-0.1,-0.1,  -0.1, 0.1,-0.1,   0.1, 0.1,-0.1
         ], [
             1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,
-            0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,
-            0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,
-            0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,
-            0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,
-            0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0, 0.0, 0.0
+            1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0
         ], [
              0, 1, 2,   0, 2, 3,
              4, 5, 6,   4, 6, 7,
@@ -186,14 +190,16 @@ class Bullet {
             16,17,18,  16,18,19,
             20,21,22,  20,22,23
         ]);
+        this.component.scale(0.2, 0.2, 0.2);
+        this.component.setLocalCoordToWorldCoord();
         this.component.move(...position);
-        this.height = position[2];
         this.light = new PointLight(
             position,
-            new Array(3).fill(0.05),
-            new Array(3).fill(0.1),
+            new Array(3).fill(0.0),
+            new Array(3).fill(0.3),
             new Array(3).fill(0.1)
         );
+        Bullet.num += 1;
     }
 
     move(dx, dy, dz) {
@@ -201,24 +207,32 @@ class Bullet {
         this.light.move(dx, dy, dz);
     }
 
-    shoot(velocity) {
+    shoot(velocity, rm) {
         let self = this;
-        self.iterator = new Iterator(1.0, 0.05, function(amount) {
-            const G = -9.8;
-            const STEP_SIZE = 0.01;
-            for (let i = 0; i < amount / STEP_SIZE; i++) {
-                if (self.height < -1.0) {
-                    self.stop();
-                }
+        const G = -9.8;
+        const STEP_SIZE = 0.02;
+        let total = 0.0;
+        let iterator = new Iterator(1.0, 1.0, function(amount) {
+            total += amount;
+            if (total >= STEP_SIZE) {
                 self.move(velocity[0] * STEP_SIZE, velocity[1] * STEP_SIZE, velocity[2] * STEP_SIZE);
+                if (self.component.position[2] < 0.0) {
+                    iterator.stop();
+                    rm.delCompo(self.compoId);
+                    rm.delLight(self.lightId);
+                    Bullet.num -= 1;
+                }
                 // velocity[0] += 0 * STEP_SIZE;
                 // velocity[1] += 0 * STEP_SIZE;
                 velocity[2] += G * STEP_SIZE;
+                total = 0.0;
             }
         });
-        self.iterator.start();
+        iterator.start();
     }
 }
+Bullet.num = 0; // static member
+
 
 class Chopper {
 
@@ -287,16 +301,16 @@ class Chopper {
             0.02,-0.5,-0.02, -0.02,-0.5,-0.02, -0.1, -0.1,-0.1,   0.1, -0.1,-0.1,
            -0.02,-0.5,-0.02, -0.02,-0.5, 0.02, -0.1, -0.1, 0.1,  -0.1, -0.1,-0.1
         ], [
-            0.4, 0.4, 1.0,  0.4, 0.4, 1.0,  0.4, 0.4, 1.0,  0.4, 0.4, 1.0,
-            0.5, 0.5, 0.5,  0.5, 0.5, 0.5,  0.5, 0.5, 0.5,  0.5, 0.5, 0.5,
+            0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4,
+            0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4,
             0.5, 0.7, 1.0,  0.5, 0.7, 1.0,  0.5, 0.7, 1.0,  0.5, 0.7, 1.0,
-            0.5, 0.5, 0.5,  0.5, 0.5, 0.5,  0.5, 0.5, 0.5,  0.5, 0.5, 0.5,
-            0.1, 0.1, 0.1,  0.1, 0.1, 0.1,  0.1, 0.1, 0.1,  0.1, 0.1, 0.1,
-            0.3, 0.3, 0.3,  0.3, 0.3, 0.3,  0.3, 0.3, 0.3,  0.3, 0.3, 0.3,
-            0.5, 0.5, 1.0,  0.5, 0.5, 1.0,  0.5, 0.5, 1.0,  0.5, 0.5, 1.0,
-            0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,
-            0.2, 0.2, 0.2,  0.2, 0.2, 0.2,  0.2, 0.2, 0.2,  0.2, 0.2, 0.2,
-            0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6
+            0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4,
+            0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4,
+            0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4,
+            0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4,
+            0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4,
+            0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4,
+            0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4, 0.0, 0.25, 0.4
         ], [
              0, 1, 2,   0, 2, 3,
              4, 5, 6,   4, 6, 7,
@@ -320,12 +334,12 @@ class Chopper {
            -0.1,-0.1,-0.1,   0.1,-0.1,-0.1,   0.1,-0.1, 0.1,  -0.1,-0.1, 0.1,
             0.1,-0.1,-0.1,  -0.1,-0.1,-0.1,  -0.1, 0.1,-0.1,   0.1, 0.1,-0.1
         ], [
-            0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0, 0.0, 0.0,
             0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,
             0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,
             0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,
             0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,
-            0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0, 0.0, 0.0
+            0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,
+            0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6,  0.6, 0.6, 0.6
         ], [
              0, 1, 2,   0, 2, 3,
              4, 5, 6,   4, 6, 7,
@@ -335,4 +349,4 @@ class Chopper {
             20,21,22,  20,22,23
         ]);
     }
-};
+}

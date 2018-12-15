@@ -13,7 +13,7 @@ class Iterator {
         this.second = second;
         this.amount = amount;
         this.behavior = behavior;
-        this.reqId = undefined;
+        this.isStarted = false;
     }
 
     start() {
@@ -25,12 +25,15 @@ class Iterator {
 
             curTime = newTime;
             self.behavior(self.amount * elapsedSecond / self.second);
-            self.reqId = requestAnimationFrame(loop);
+            if (self.isStarted) {
+                requestAnimationFrame(loop);
+            }
         };
+        self.isStarted = true;
         loop();
     }
 
     stop() {
-        cancelAnimationFrame(this.reqId);
+        this.isStarted = false;
     }
 }

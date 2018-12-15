@@ -10,8 +10,6 @@
 class Component {
 
     constructor(vertices, indices) {
-        this.positionVector = new Vector3([0.0, 0.0, 0.0]);
-        this.directionVector = new Vector3([0.0, 1.0, 0.0]);
         this.vertices = new Float32Array(vertices); // can be vertices' positions or texture coordinates
         this.indices = new Uint32Array(indices);
         this.dynamicMatrix = new Matrix4();
@@ -35,7 +33,7 @@ class Component {
         return new Matrix4().setInverseOf(this.modelMatrix).transpose();
     }
 
-    get direction() { return this.directionVector.elements; }
+    get direction() { return this.modelMatrix.multiplyVector3(new Vector3([0.0, 1.0, 0.0])).elements.map((x, i) => x - this.position[i]); }
     get position() { return this.modelMatrix.multiplyVector3(new Vector3([0.0, 0.0, 0.0])).elements; }
 
     static moveAlong(component, vector) {
@@ -54,7 +52,6 @@ class Component {
     }
 
     move(x, y, z) {
-        this.positionVector = new Matrix4().setTranslate(x, y, z).multiplyVector3(this.positionVector);
         this.dynamicMatrix.translate(x, y, z);
     }
 
@@ -71,7 +68,6 @@ class Component {
     }
 
     rotate(angle, x, y, z) {
-        this.directionVector = new Matrix4().setRotate(angle, x, y, z).multiplyVector3(this.directionVector);
         this.dynamicMatrix.rotate(angle, x, y, z);
     }
 
@@ -84,7 +80,6 @@ class Component {
     }
 
     setLocalCoordToWorldCoord() {
-        this.positionVector = new Vector3([0.0, 0.0, 0.0]);
         this.staticMatrix.set(this.dynamicMatrix);
         this.dynamicMatrix = new Matrix4();
     }
