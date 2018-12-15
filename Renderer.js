@@ -11,21 +11,27 @@ class Renderer {
 
     constructor(canvas) {
         this.gl = canvas.getContext('webgl2');
-        var vscText = document.getElementById('vshader-colored').text;
-        var fscText = document.getElementById('fshader-colored').text;
-        var vstText = document.getElementById('vshader-textured').text;
-        var fstText = document.getElementById('fshader-textured').text;
-        var vstrText = document.getElementById('vshader-terrain').text;
-        var fstrText = document.getElementById('fshader-terrain').text;
+        let vscText = document.getElementById('vshader-colored').text;
+        let fscText = document.getElementById('fshader-colored').text;
+        let vstText = document.getElementById('vshader-textured').text;
+        let fstText = document.getElementById('fshader-textured').text;
+        let vstrText = document.getElementById('vshader-terrain').text;
+        let fstrText = document.getElementById('fshader-terrain').text;
         this.csp = new ColorShaderProgram(this.gl, vscText, fscText);
         this.tsp = new TextureShaderProgram(this.gl, vstText, fstText);
         this.trsp = new TerrainShaderProgram(this.gl, vstrText, fstrText);
         this.viewMatrix = new Matrix4();
         this.eyePoint = [0.0, -3.0, 2.0];
         this.projMatrix = new Matrix4();
-
-        this.light = new DirectionalLight([5.0, -5.0, 5.0], [0.1, 0.1, 0.1], [0.3, 0.3, 0.3], [0.3, 0.3, 0.3]);
-
+        this.components = [];
+        this.dLights = [];
+        this.pLights = [];
+        this.dLights.push(new DirectionalLight(
+            [5.0, -5.0, 5.0],
+            new Array(3).fill(0.05),
+            new Array(3).fill(0.2),
+            new Array(3).fill(0.2)
+        ));
         this._init();
     }
 
@@ -33,10 +39,10 @@ class Renderer {
     static get Y_AXIS() { return [0.0, 1.0, 0.0]; }
     static get Z_AXIS() { return [0.0, 0.0, 1.0]; }
     get horizAxis() {
-        var mat = new Matrix4().setRotate(90, 0, 0, 1);
-        var eyeVec = new Vector4(this.eyePoint.concat([1.0]));
-        var rotdVec = mat.multiplyVector4(eyeVec);
-        var rotdEye = Array.from(rotdVec.elements).slice(0, 3);
+        let mat = new Matrix4().setRotate(90, 0, 0, 1);
+        let eyeVec = new Vector4(this.eyePoint.concat([1.0]));
+        let rotdVec = mat.multiplyVector4(eyeVec);
+        let rotdEye = Array.from(rotdVec.elements).slice(0, 3);
         rotdEye[2] = 0;
         return rotdEye;
     }
@@ -49,8 +55,12 @@ class Renderer {
         this.clear();
     }
 
+    addComponent(component) {
+
+    }
+
     load(component) {
-        var self = this;
+        let self = this;
         if (component instanceof ColoredComponent) {
             component.vao = this.gl.createVertexArray();
             this._setColoredVao(component.vao, component.vertices, component.colors, component.normals, component.indices);
@@ -176,11 +186,21 @@ class Renderer {
     }
 
     _uniformLights(program) {
-        this.gl.uniform3fv(program.loc['u_LightDirection'], this.light['direction']);
-        this.gl.uniform3fv(program.loc['u_AmbientIntensity'], this.light.ambientIntensity);
-        this.gl.uniform3fv(program.loc['u_DiffusiveIntensity'], this.light.diffusiveIntensity);
-        this.gl.uniform3fv(program.loc['u_SpecularIntensity'], this.light.specularIntensity);
         this.gl.uniform3fv(program.loc['u_EyePosition'], new Float32Array(this.eyePoint));
+        this.gl.uniform1i(program.loc['u_DLightNum'], this.dLights.length);
+        this.gl.uniform1i(program.loc['u_PLightNum'], this.pLights.length);
+        for (let i = 0; i < this.dLights.length; i++) {
+            this.gl.uniform3fv(program.loc['u_DLight[' + i + '].direction'], this.dLights[i].direction);
+            this.gl.uniform3fv(program.loc['u_DLight[' + i + '].ambient'], this.dLights[i].ambientIntensity);
+            this.gl.uniform3fv(program.loc['u_DLight[' + i + '].diffusive'], this.dLights[i].diffusiveIntensity);
+            this.gl.uniform3fv(program.loc['u_DLight[' + i + '].specular'], this.dLights[i].specularIntensity);
+        }
+        for (let i = 0; i < this.pLights.length; i++) {
+            this.gl.uniform3fv(program.loc['u_PLight[' + i + '].position'], this.pLights[i].position);
+            this.gl.uniform3fv(program.loc['u_PLight[' + i + '].ambient'], this.pLights[i].ambientIntensity);
+            this.gl.uniform3fv(program.loc['u_PLight[' + i + '].diffusive'], this.pLights[i].diffusiveIntensity);
+            this.gl.uniform3fv(program.loc['u_PLight[' + i + '].specular'], this.pLights[i].specularIntensity);
+        }
     }
 
     _modelToMVP(modelMatrix) {
@@ -204,10 +224,10 @@ class Renderer {
     }
 
     rotateView(angle, axis) {
-        var mat = new Matrix4().setRotate(angle, ...axis);
-        var vec = new Vector4(this.eyePoint.concat([1.0]));
-        var newVec = mat.multiplyVector4(vec);
-        var newEyePoint = Array.from(newVec.elements).slice(0, 3);
+        let mat = new Matrix4().setRotate(angle, ...axis);
+        let vec = new Vector4(this.eyePoint.concat([1.0]));
+        let newVec = mat.multiplyVector4(vec);
+        let newEyePoint = Array.from(newVec.elements).slice(0, 3);
         if (!this._isProperEye(newEyePoint)) {
             return;
         }
@@ -217,13 +237,13 @@ class Renderer {
     }
 
     zoomView(diff) {
-        var eyeDist = Math.sqrt(this.eyePoint.map(x => x * x).reduce((x, y) => x + y, 0));
-        var newDist = eyeDist - diff;
+        let eyeDist = Math.sqrt(this.eyePoint.map(x => x * x).reduce((x, y) => x + y, 0));
+        let newDist = eyeDist - diff;
         if (newDist < 0.1) {
             return;
         }
-        var prop = newDist / eyeDist;
-        var newEyePoint = this.eyePoint.map(x => x * prop);
+        let prop = newDist / eyeDist;
+        let newEyePoint = this.eyePoint.map(x => x * prop);
 
         this.viewFrom(newEyePoint);
         this.eyePoint = newEyePoint;
@@ -242,6 +262,10 @@ class Renderer {
     setViewport(posX, posY, width, height) {
         this.gl.viewport(posX, posY, width, height);
     }
+
+    addPointLight(pLight) {
+        this.pLights.push(pLight);
+    }
 }
 
 
@@ -252,7 +276,7 @@ class ShaderProgram {
         this.program = this.gl.program;
         this.loc = {};
         this._setLocations();
-        this._setLightLocations();
+        this._setLightLocations(1, 5); // defined at shader's MACRO
     }
 
     use() {
@@ -263,9 +287,24 @@ class ShaderProgram {
         // abstract method
     }
 
-    _setLightLocations() {
-        for (var varString of ['u_LightDirection', 'u_AmbientIntensity', 'u_DiffusiveIntensity', 'u_SpecularIntensity', 'u_EyePosition']) {
-            this.loc[varString] = this._getLocation(varString);
+    _setLightLocations(dLightNum, pLightNum) {
+
+        let locStrings = [];
+        locStrings.push('u_EyePosition', 'u_DLightNum', 'u_PLightNum');
+        for (let i = 0; i < dLightNum; i++) {
+            locStrings.push('u_DLight[' + i + '].direction');
+            locStrings.push('u_DLight[' + i + '].ambient');
+            locStrings.push('u_DLight[' + i + '].diffusive');
+            locStrings.push('u_DLight[' + i + '].specular');
+        }
+        for (let i = 0; i < pLightNum; i++) {
+            locStrings.push('u_PLight[' + i + '].position');
+            locStrings.push('u_PLight[' + i + '].ambient');
+            locStrings.push('u_PLight[' + i + '].diffusive');
+            locStrings.push('u_PLight[' + i + '].specular');
+        }
+        for (let locString of locStrings) {
+            this.loc[locString] = this._getLocation(locString);
         }
     }
 
@@ -283,7 +322,7 @@ class ShaderProgram {
 
 class ColorShaderProgram extends ShaderProgram {
     _setLocations() {
-        for (var varString of ['a_Position', 'a_Color', 'a_Normal', 'u_MvpMatrix', 'u_ModelMatrix', 'u_NormalMatrix']) {
+        for (let varString of ['a_Position', 'a_Color', 'a_Normal', 'u_MvpMatrix', 'u_ModelMatrix', 'u_NormalMatrix']) {
             this.loc[varString] = this._getLocation(varString);
         }
     }
@@ -292,7 +331,7 @@ class ColorShaderProgram extends ShaderProgram {
 
 class TextureShaderProgram extends ShaderProgram {
     _setLocations() {
-        for (var varString of ['a_Position', 'a_TexCoord', 'u_MvpMatrix', 'u_Sampler']) {
+        for (let varString of ['a_Position', 'a_TexCoord', 'u_MvpMatrix', 'u_Sampler']) {
             this.loc[varString] = this._getLocation(varString);
         }
     }
@@ -301,7 +340,7 @@ class TextureShaderProgram extends ShaderProgram {
 
 class TerrainShaderProgram extends ShaderProgram {
     _setLocations() {
-        for (var varString of ['a_TexCoord', 'u_MvpMatrix', 'u_ModelMatrix', 'u_Sampler']) {
+        for (let varString of ['a_TexCoord', 'u_MvpMatrix', 'u_ModelMatrix', 'u_Sampler']) {
             this.loc[varString] = this._getLocation(varString);
         }
     }

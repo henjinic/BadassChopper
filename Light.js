@@ -32,4 +32,10 @@ class PointLight extends Light {
         super(ambientIntensity, diffusiveIntensity, specularIntensity);
         this.position = new Float32Array(position);
     }
+
+    move(dx, dy, dz) {
+        this.position[0] += dx;
+        this.position[1] += dy;
+        this.position[2] += dz;
+    }
 }

@@ -10,6 +10,8 @@
 class Component {
 
     constructor(vertices, indices) {
+        this.positionVector = new Vector3([0.0, 0.0, 0.0]);
+        this.directionVector = new Vector3([0.0, 1.0, 0.0]);
         this.vertices = new Float32Array(vertices); // can be vertices' positions or texture coordinates
         this.indices = new Uint32Array(indices);
         this.dynamicMatrix = new Matrix4();
@@ -33,27 +35,56 @@ class Component {
         return new Matrix4().setInverseOf(this.modelMatrix).transpose();
     }
 
+    get direction() { return this.directionVector.elements; }
+    get position() { return this.modelMatrix.multiplyVector3(new Vector3([0.0, 0.0, 0.0])).elements; }
+
+    static moveAlong(component, vector) {
+        let newVec = vector.concat([1.0]);
+        newVec = new Vector4(newVec);
+        newVec = component.accumulatedDynamicMatrix.multiplyVector4(newVec).elements;
+        return Array.from(newVec).slice(0, 3);
+    }
+
+    directionTo(x, y, z) {
+        return [x - this.position[0], y - this.position[1], z - this.position[2]];
+    }
+
     addChild(child) {
         child.parent = this;
     }
 
+    move(x, y, z) {
+        this.positionVector = new Matrix4().setTranslate(x, y, z).multiplyVector3(this.positionVector);
+        this.dynamicMatrix.translate(x, y, z);
+    }
+
+    moveX(distance) {
+        this.move(distance, 0.0, 0.0);
+    }
+
     moveY(distance) {
-        this.dynamicMatrix.translate(0.0, distance, 0.0);
+        this.move(0.0, distance, 0.0);
     }
 
     moveZ(distance) {
-        this.dynamicMatrix.translate(0.0, 0.0, distance);
+        this.move(0.0, 0.0, distance);
+    }
+
+    rotate(angle, x, y, z) {
+        this.directionVector = new Matrix4().setRotate(angle, x, y, z).multiplyVector3(this.directionVector);
+        this.dynamicMatrix.rotate(angle, x, y, z);
     }
 
     rotateZ(angle) {
-        this.dynamicMatrix.rotate(angle, 0.0, 0.0, 1.0);
+        this.rotate(angle, 0.0, 0.0, 1.0);
     }
 
     scale(x, y, z) {
         this.dynamicMatrix.scale(x, y, z);
     }
 
-    fix() {
+    setLocalCoordToWorldCoord() {
+        this.positionVector = new Vector3([0.0, 0.0, 0.0]);
         this.staticMatrix.set(this.dynamicMatrix);
         this.dynamicMatrix = new Matrix4();
     }
@@ -65,9 +96,9 @@ class ColoredComponent extends Component {
     constructor(vertices, colors, indices) {
         super(vertices, indices);
 
-        var normals = [];
-        var x1, y1, z1, x2, y2, z2, cx, cy, cz;
-        for (var i = 0; i < vertices.length; i += 12) {
+        let normals = [];
+        let x1, y1, z1, x2, y2, z2, cx, cy, cz;
+        for (let i = 0; i < vertices.length; i += 12) {
             x1 = vertices[i + 3] - vertices[i];
             y1 = vertices[i + 4] - vertices[i + 1];
             z1 = vertices[i + 5] - vertices[i + 2];
