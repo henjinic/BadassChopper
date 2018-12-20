@@ -10,7 +10,7 @@
 class Component {
 
     constructor(vertices, indices) {
-        this.vertices = new Float32Array(vertices); // can be vertices' positions or texture coordinates
+        this.vertices = new Float32Array(vertices); // can be either vertices' positions or texture coordinates
         this.indices = new Uint32Array(indices);
         this.dynamicMatrix = new Matrix4();
         this.staticMatrix = new Matrix4();
@@ -35,13 +35,6 @@ class Component {
 
     get direction() { return this.modelMatrix.multiplyVector3(new Vector3([0.0, 1.0, 0.0])).elements.map((x, i) => x - this.position[i]); }
     get position() { return this.modelMatrix.multiplyVector3(new Vector3([0.0, 0.0, 0.0])).elements; }
-
-    static moveAlong(component, vector) {
-        let newVec = vector.concat([1.0]);
-        newVec = new Vector4(newVec);
-        newVec = component.accumulatedDynamicMatrix.multiplyVector4(newVec).elements;
-        return Array.from(newVec).slice(0, 3);
-    }
 
     directionTo(x, y, z) {
         return [x - this.position[0], y - this.position[1], z - this.position[2]];
@@ -112,16 +105,16 @@ class ColoredComponent extends Component {
 }
 
 
-class TexturedComponent extends Component {
+// class TexturedComponent extends Component {
 
-    constructor(vertices, indices, image) {
-        super(vertices, indices);
-        this.image = new Image();
-        this.image.crossOrigin = 'anonymous';
-        this.image.src = image;
-        this.isLoaded = false;
-    }
-}
+//     constructor(vertices, indices, image) {
+//         super(vertices, indices);
+//         this.image = new Image();
+//         this.image.crossOrigin = 'anonymous';
+//         this.image.src = image;
+//         this.isLoaded = false;
+//     }
+// }
 
 
 class TerrainComponent extends Component {

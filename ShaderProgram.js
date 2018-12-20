@@ -8,6 +8,7 @@
     2018.12.16
 */
 class ShaderProgram {
+
     constructor(gl, vshader, fshader) {
         this.gl = gl;
         initShaders(this.gl, vshader, fshader);
@@ -26,7 +27,6 @@ class ShaderProgram {
     }
 
     _setLightLocations(dLightNum, pLightNum) {
-
         let locStrings = [];
         locStrings.push('u_EyePosition', 'u_DLightNum', 'u_PLightNum');
         for (let i = 0; i < dLightNum; i++) {
@@ -67,13 +67,13 @@ class ColorShaderProgram extends ShaderProgram {
 }
 
 
-class TextureShaderProgram extends ShaderProgram {
-    _setLocations() {
-        for (let varString of ['a_Position', 'a_TexCoord', 'u_MvpMatrix', 'u_Sampler']) {
-            this.loc[varString] = this._getLocation(varString);
-        }
-    }
-}
+// class TextureShaderProgram extends ShaderProgram {
+//     _setLocations() {
+//         for (let varString of ['a_Position', 'a_TexCoord', 'u_MvpMatrix', 'u_Sampler']) {
+//             this.loc[varString] = this._getLocation(varString);
+//         }
+//     }
+// }
 
 
 class TerrainShaderProgram extends ShaderProgram {
@@ -83,4 +83,3 @@ class TerrainShaderProgram extends ShaderProgram {
         }
     }
 }
-

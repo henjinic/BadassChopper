@@ -47,34 +47,13 @@ class ChopperSimulator {
     start() {
         let self = this;
         let total = 0.0;
-        new Iterator(1.0, 60.0, function(amount) { // 60 frames per second. (?)
+        new Iterator(1.0, 80.0, function(amount) {
             total += amount;
             if (total >= 1.0) {
                 self.rm.draw();
                 total = 0.0;
             }
         }).start();
-    }
-
-    _drawLeftViewport() {
-        this.renderer.setViewport(0, 0, this.W, this.H);
-        this.renderer.setDefaultView();
-        this.renderer.render(this.ground.component);
-        this.renderer.render(this.chopper.body);
-        this.renderer.render(this.chopper.rotor1);
-        this.renderer.render(this.chopper.rotor2);
-    }
-
-    _drawRightViewport() {
-        this.renderer.setViewport(this.W, 0, this.W, this.H);
-        let src = Component.moveAlong(this.chopper.body, [0.0, 0.0, 0.0]);
-        let dest = src.slice();
-        dest[2] -= 1.0;
-        let up = Component.moveAlong(this.chopper.body, [0.0, 1.0, 0.0]);
-        for (let i = 0; i < 3; i++)
-            up[i] -= src[i];
-        this.renderer.view(src, dest, up);
-        this.renderer.render(this.ground.component);
     }
 
     keypressOn() {
@@ -85,11 +64,11 @@ class ChopperSimulator {
                 case 'ArrowRight': event.shiftKey ? self.view.rotateView(5.0, View.Z_AXIS) : self.chopper.counterclockwise(10.0); break;
                 case 'ArrowUp':    event.shiftKey ? self.view.rotateView(-5.0, self.view.horizAxis) : self.chopper.forward(0.05); break;
                 case 'ArrowDown':  event.shiftKey ? self.view.rotateView(5.0, self.view.horizAxis) : self.chopper.backward(0.05); break;
-                case 'A': case 'a': self.chopper.up(0.05);        break;
-                case 'Z': case 'z': self.chopper.down(0.05);      break;
+                case 'A': case 'a': self.chopper.up(0.05);    break;
+                case 'Z': case 'z': self.chopper.down(0.05);  break;
                 case '=': case '+': self.view.zoomView(0.2);  break;
                 case '-': case '_': self.view.zoomView(-0.2); break;
-                case ' ': self._shootGlowingBullet();             break;
+                case ' ': self._shootGlowingBullet();         break;
             }
         };
     }
@@ -103,7 +82,6 @@ class ChopperSimulator {
             let velocity = this.chopper.body.direction.slice();
             velocity[2] += 1.0;
             velocity = velocity.map(x => x * 3.0);
-
             bullet.shoot(velocity, this.rm);
         }
     }
@@ -114,29 +92,11 @@ class ChopperSimulator {
 
     rotorOn() {
         let self = this;
-        this.iterator = new Iterator(1.0, 200.0, function(amount) { // 200 degrees per 1 sec
+        this.iterator = new Iterator(1.0, 200.0, function(amount) {
             self.chopper.rotor1.rotateZ(amount);
             self.chopper.rotor2.rotateZ(amount);
         });
         this.iterator.start();
-    }
-}
-
-
-class Ground {
-
-    constructor(path) {
-        this.component = new TexturedComponent([
-           -2.0, 2.0, 0.0,
-            2.0, 2.0, 0.0,
-            2.0,-2.0, 0.0,
-           -2.0,-2.0, 0.0
-        ], [
-            0, 1, 2,
-            0, 2, 3
-        ],
-            path
-        );
     }
 }
 
@@ -167,7 +127,6 @@ class Terrain {
 class Bullet {
 
     constructor(position) {
-        let color = [];
         this.component = new ColoredComponent([
             0.1, 0.1, 0.1,  -0.1, 0.1, 0.1,  -0.1,-0.1, 0.1,   0.1,-0.1, 0.1,
             0.1, 0.1, 0.1,   0.1,-0.1, 0.1,   0.1,-0.1,-0.1,   0.1, 0.1,-0.1,
@@ -231,7 +190,7 @@ class Bullet {
         iterator.start();
     }
 }
-Bullet.num = 0; // static member
+Bullet.num = 0; // static member variable
 
 
 class Chopper {
@@ -267,13 +226,13 @@ class Chopper {
     clockwise(angle) {
         this.body.rotateZ(angle);
         this.rotor1.rotateZ(-angle);
-        this.rotor2.rotateZ(-angle); // adjustment
+        this.rotor2.rotateZ(-angle);
     }
 
     counterclockwise(angle) {
         this.body.rotateZ(-angle);
         this.rotor1.rotateZ(angle);
-        this.rotor2.rotateZ(angle); // adjustment
+        this.rotor2.rotateZ(angle);
     }
 
     up(distance) {
