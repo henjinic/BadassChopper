@@ -7,26 +7,31 @@
 
   <body onload="main()">
     <h1>Badass Chopper Simulation</h1>
-    <h3>by Hyeonjin Kim (2013875008, Landscape Architecture)</h3>
+    <p>
+      Hyeonjin Kim / 2013875008<br>
+      Department of Landscape Architecture<br>
+      University of Seoul
+    </p>
 
     <canvas id="webgl" width="600" height="600">
       Please use a browser that supports "canvas"
     </canvas>
 
-    <p>
-      Please use arrow keys, 'w', and 's'.
-    </p>
+<!---------------------------------------------------------------->
 
     <script id="vshader-colored" type="x-shader/x-vertex">
       attribute vec4 a_Position;
       attribute vec4 a_Color;
       attribute vec4 a_Normal;
+
       uniform mat4 u_MvpMatrix;
       uniform mat4 u_ModelMatrix;
       uniform mat4 u_NormalMatrix;
+
       varying vec3 v_Position;
       varying vec4 v_Color;
       varying vec3 v_Normal;
+
       void main()
       {
         gl_Position = u_MvpMatrix * a_Position;
@@ -109,27 +114,7 @@
       }
     </script>
 
-    <script id="vshader-textured" type="x-shader/x-vertex">
-      attribute vec4 a_Position;
-      attribute vec2 a_TexCoord;
-      uniform   mat4 u_MvpMatrix;
-      varying   vec2 v_TexCoord;
-      void main()
-      {
-        gl_Position = u_MvpMatrix * a_Position;
-        v_TexCoord  = a_TexCoord;
-      }
-    </script>
-
-    <script id="fshader-textured" type="x-shader/x-fragment">
-      precision mediump float;
-      uniform sampler2D u_Sampler;
-      varying vec2 v_TexCoord;
-      void main()
-      {
-        gl_FragColor = texture2D(u_Sampler, v_TexCoord);
-      }
-    </script>
+<!---------------------------------------------------------------->
 
     <script id="vshader-terrain" type="x-shader/x-vertex">
       attribute vec2 a_TexCoord;
@@ -223,6 +208,8 @@
         }
       }
     </script>
+
+<!---------------------------------------------------------------->
 
     <script src="./lib/webgl-utils.js"></script>
     <script src="./lib/webgl-debug.js"></script>

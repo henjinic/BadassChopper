@@ -46,6 +46,7 @@ class RenderingManager {
     draw() {
         this.renderer.clear();
         for (let view of Object.values(this.viewDict)) {
+            this.renderer.setViewport(view.x, view.y, view.width, view.height);
             for (let compo of Object.values(this.compoDict)) {
                 this.renderer.render(compo, Object.values(this.lightDict), view);
             }

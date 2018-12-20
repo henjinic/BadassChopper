@@ -13,27 +13,22 @@ class Renderer {
         this.gl = canvas.getContext('webgl2');
         let vscText = document.getElementById('vshader-colored').text;
         let fscText = document.getElementById('fshader-colored').text;
-        let vstText = document.getElementById('vshader-textured').text;
-        let fstText = document.getElementById('fshader-textured').text;
+        // let vstText = document.getElementById('vshader-textured').text;
+        // let fstText = document.getElementById('fshader-textured').text;
         let vstrText = document.getElementById('vshader-terrain').text;
         let fstrText = document.getElementById('fshader-terrain').text;
         this.csp = new ColorShaderProgram(this.gl, vscText, fscText);
-        this.tsp = new TextureShaderProgram(this.gl, vstText, fstText);
+        // this.tsp = new TextureShaderProgram(this.gl, vstText, fstText);
         this.trsp = new TerrainShaderProgram(this.gl, vstrText, fstrText);
         this.projMatrix = new Matrix4();
         this._init();
     }
 
     _init() {
-        //this.setDefaultView();
         this.projMatrix.setPerspective(90, 1.0, 0.01, 100.0);
         this.gl.enable(this.gl.DEPTH_TEST);
         this.gl.clearColor(0.0, 0.0, 0.0, 1.0);
         this.clear();
-    }
-
-    addComponent(component) {
-
     }
 
     load(component) {
@@ -41,32 +36,10 @@ class Renderer {
         if (component instanceof ColoredComponent) {
             component.vao = this.gl.createVertexArray();
             this._setColoredVao(component.vao, component.vertices, component.colors, component.normals, component.indices);
-        } else if (component instanceof TexturedComponent) {
-            {
-                component.vao = this.gl.createVertexArray();
-                this._setTexturedVao(component.vao, component.vertices, new Float32Array([
-                    0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0
-                ]), component.indices);
-                component.image.onload = function() { self._loadImage(component) };
-            }
-            {   // to show green plane while loading
-                component.loadingVao = this.gl.createVertexArray();
-                this._setColoredVao(component.loadingVao, component.vertices, new Float32Array([
-                    0.2, 0.3, 0.1, 0.2, 0.3, 0.1, 0.2, 0.3, 0.1, 0.2, 0.3, 0.1
-                ]), component.indices);
-            }
         } else if (component instanceof TerrainComponent) {
-            {
-                component.vao = this.gl.createVertexArray();
-                this._setTerrainVao(component.vao, component.vertices, component.indices);
-                component.image.onload = function() { self._loadImage(component) };
-            }
-            {   // to show brown plane while loading
-                // component.loadingVao = this.gl.createVertexArray();
-                // this._setColoredVao(component.loadingVao, component.vertices, new Float32Array([
-                //     0.2, 0.3, 0.1, 0.2, 0.3, 0.1, 0.2, 0.3, 0.1, 0.2, 0.3, 0.1
-                // ]), component.indices);
-            }
+            component.vao = this.gl.createVertexArray();
+            this._setTerrainVao(component.vao, component.vertices, component.indices);
+            component.image.onload = function() { self._loadImage(component) };
         } else {
             console.log('Error: Renderer.load()');
         }
@@ -90,13 +63,13 @@ class Renderer {
         this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, indices, this.gl.STATIC_DRAW);
     }
 
-    _setTexturedVao(vao, vertices, coords, indices) {
-        this.gl.bindVertexArray(vao);
-        this._setArrayBuffer(vertices, this.tsp.loc['a_Position'], 3);
-        this._setArrayBuffer(coords, this.tsp.loc['a_TexCoord'], 2);
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.gl.createBuffer());
-        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, indices, this.gl.STATIC_DRAW);
-    }
+    // _setTexturedVao(vao, vertices, coords, indices) {
+    //     this.gl.bindVertexArray(vao);
+    //     this._setArrayBuffer(vertices, this.tsp.loc['a_Position'], 3);
+    //     this._setArrayBuffer(coords, this.tsp.loc['a_TexCoord'], 2);
+    //     this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.gl.createBuffer());
+    //     this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, indices, this.gl.STATIC_DRAW);
+    // }
 
     _setTerrainVao(vao, coords, indices) {
         this.gl.bindVertexArray(vao);
@@ -115,16 +88,9 @@ class Renderer {
     render(component, lights, view) {
         if (component instanceof ColoredComponent) {
             this._renderColoredComponent(component, component.vao, lights, view);
-        } else if (component instanceof TexturedComponent) {
-            if (component.isLoaded)
-                this._renderTexturedComponent(component, component.vao, lights, view);
-            else
-                this._renderColoredComponent(component, component.loadingVao, lights, view);
         } else if (component instanceof TerrainComponent) {
             if (component.isLoaded)
                 this._renderTerrainComponent(component, component.vao, lights, view);
-            // else
-                // this._renderColoredComponent(component, component.loadingVao, lights, view);
         } else {
             console.log('Error: Renderer.render()');
         }
@@ -140,15 +106,15 @@ class Renderer {
         this.gl.drawElements(this.gl.TRIANGLES, component.indices.length, this.gl.UNSIGNED_INT, 0);
     }
 
-    _renderTexturedComponent(component, vao, lights, view) {
-        this.gl.bindVertexArray(vao);
-        this.tsp.use();
-        this.gl.uniformMatrix4fv(this.tsp.loc['u_MvpMatrix'], false, this._getMvpMatrix(component, view).elements);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, component.texture);
-        this.gl.activeTexture(this.gl.TEXTURE0);
-        this.gl.uniform1i(this.tsp.loc['u_Sampler'], 0);
-        this.gl.drawElements(this.gl.TRIANGLES, component.indices.length, this.gl.UNSIGNED_INT, 0);
-    }
+    // _renderTexturedComponent(component, vao, lights, view) {
+    //     this.gl.bindVertexArray(vao);
+    //     this.tsp.use();
+    //     this.gl.uniformMatrix4fv(this.tsp.loc['u_MvpMatrix'], false, this._getMvpMatrix(component, view).elements);
+    //     this.gl.bindTexture(this.gl.TEXTURE_2D, component.texture);
+    //     this.gl.activeTexture(this.gl.TEXTURE0);
+    //     this.gl.uniform1i(this.tsp.loc['u_Sampler'], 0);
+    //     this.gl.drawElements(this.gl.TRIANGLES, component.indices.length, this.gl.UNSIGNED_INT, 0);
+    // }
 
     _renderTerrainComponent(component, vao, lights, view) {
         this.gl.bindVertexArray(vao);
