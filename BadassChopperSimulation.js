@@ -104,7 +104,7 @@ class ChopperSimulator {
 class Terrain {
 
     constructor(path) {
-        const SIZE = 256.0;
+        const SIZE = 256.0; // set for reducing overhead
         const GAP = 1.0 / SIZE;
         let coords = [];
         let indices = [];
